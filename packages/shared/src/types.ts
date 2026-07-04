@@ -1,6 +1,7 @@
 export type AgentStatus =
   | "not_born"
   | "booting"
+  | "waking"
   | "observing"
   | "thinking"
   | "acting"
@@ -26,6 +27,29 @@ export type RiskLevel = "low" | "medium" | "high" | "critical";
 export type ApprovalMode = "auto" | "ask" | "deny";
 export type PermissionStatus = "pending" | "approved" | "rejected" | "expired";
 export type ActionStatus = "pending" | "approved" | "rejected" | "completed" | "skipped";
+export type EmotionPrimary = "curious" | "engaged" | "waiting" | "bored" | "looping" | "timid" | "excited" | "tired";
+
+export type EmotionMetrics = {
+  curiosity: number;
+  arousal: number;
+  valence: number;
+  confidence: number;
+  attachment: number;
+  patience: number;
+  boredom: number;
+  frustration: number;
+  loneliness: number;
+  trust: number;
+};
+
+export type EmotionState = {
+  primary: EmotionPrimary;
+  secondary: EmotionPrimary[];
+  metrics: EmotionMetrics;
+  lastEventAt: string;
+  lastOwnerMessageAt?: string;
+  recentEvents: Array<{ event: string; at: string; summary?: string }>;
+};
 
 export type MemoryRecord = {
   id: string;
@@ -64,7 +88,17 @@ export type PermissionRequest = {
 
 export type CandidateAction = {
   id: string;
-  kind: "ask" | "learn" | "summarize" | "reflect" | "wonder" | "help_owner" | "sleep";
+  kind:
+    | "ask"
+    | "learn"
+    | "summarize"
+    | "reflect"
+    | "consolidate"
+    | "seek_novelty"
+    | "self_improve"
+    | "wonder"
+    | "help_owner"
+    | "sleep";
   reason: string;
   expectedValue: number;
   risk: number;
@@ -77,6 +111,13 @@ export type CandidateAction = {
 export type AgentLoopState = {
   status: AgentStatus;
   currentGoal: string;
+  currentAction?: {
+    kind: CandidateAction["kind"];
+    reason: string;
+    status: ActionStatus;
+    createdAt: string;
+  };
+  emotion?: EmotionState;
   shortTermMemoryUsage: number;
   lastHeartbeatAt?: string;
   pid?: number;
@@ -91,9 +132,18 @@ export type BabyConfig = {
   bornAt: string;
   ownerName?: string;
   language: string;
+  model: {
+    provider: "openai" | "anthropic" | "ollama" | "openai_compatible" | "deepseek" | "glm" | "minimax";
+    model: string;
+    apiKeyEnvVar?: string;
+    baseUrl?: string;
+    configured: boolean;
+  };
   loop: {
     heartbeatMs: number;
     sleepMs: number;
+    activeMode: boolean;
+    activeSleepMs: number;
     proactiveDailyLimit: number;
   };
   budgets: {

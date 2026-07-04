@@ -22,3 +22,7 @@ Each request records:
 - Memory deletion and private data export: explicit approval required.
 
 The Dashboard and CLI should make sensitive access visible to the owner.
+
+## Model Tokens
+
+Model API keys are treated as local secrets. `baby config model --api-key ...` writes them to Curious Baby's local `.env` file with owner-only permissions. The config file stores only the environment variable name.

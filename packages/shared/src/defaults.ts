@@ -26,9 +26,17 @@ export function defaultConfig(now = new Date().toISOString()): BabyConfig {
     version: 1,
     bornAt: now,
     language: "auto",
+    model: {
+      provider: "openai",
+      model: "gpt-4.1-mini",
+      apiKeyEnvVar: "OPENAI_API_KEY",
+      configured: false
+    },
     loop: {
       heartbeatMs: 60_000,
       sleepMs: 10_000,
+      activeMode: false,
+      activeSleepMs: 500,
       proactiveDailyLimit: 3
     },
     budgets: {

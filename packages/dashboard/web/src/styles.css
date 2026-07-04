@@ -14,7 +14,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
 }
 
@@ -99,6 +100,11 @@ section {
   margin: 0 0 16px;
 }
 
+.panel h3 {
+  font-size: 14px;
+  margin: 18px 0 10px;
+}
+
 .big {
   font-size: 22px;
   line-height: 1.35;
@@ -168,12 +174,68 @@ input {
   padding: 0 12px;
 }
 
+input[type="checkbox"] {
+  width: 22px;
+  min-height: 22px;
+  padding: 0;
+}
+
+select {
+  min-height: 42px;
+  border: 1px solid #cfc8be;
+  border-radius: 6px;
+  padding: 0 12px;
+  background: white;
+}
+
 form button {
   border: 0;
   border-radius: 6px;
   background: #c85f3d;
   color: white;
   cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.button-row button,
+.secondary {
+  min-height: 38px;
+  border: 0;
+  border-radius: 6px;
+  background: #c85f3d;
+  color: white;
+  padding: 0 12px;
+  cursor: pointer;
+}
+
+.button-row button.secondary,
+button.secondary {
+  background: #e9e4dd;
+  color: #1b2430;
+}
+
+.runtime-hint {
+  display: block;
+  margin-top: 8px;
+  color: #657277;
+}
+
+.inline-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 110px;
+  gap: 8px;
+  margin: 0 0 16px;
 }
 
 .list,
@@ -186,6 +248,171 @@ form button {
 .traits article {
   border-top: 1px solid #e8e3dd;
   padding-top: 12px;
+}
+
+.permission-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.permission-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  border-top: 1px solid #e8e3dd;
+  padding-top: 12px;
+}
+
+.permission-card div:first-child {
+  display: grid;
+  gap: 4px;
+}
+
+.permission-card small {
+  color: #657277;
+}
+
+.mode-switch {
+  display: inline-grid;
+  grid-template-columns: repeat(3, 64px);
+  border: 1px solid #d8d1c8;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.mode-switch button {
+  min-height: 34px;
+  border: 0;
+  border-right: 1px solid #d8d1c8;
+  background: #fbfaf8;
+  color: #1b2430;
+  cursor: pointer;
+}
+
+.mode-switch button:last-child {
+  border-right: 0;
+}
+
+.mode-switch button.active {
+  background: #c85f3d;
+  color: white;
+}
+
+.connector-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid #e8e3dd;
+  padding-bottom: 14px;
+}
+
+.connector-status strong {
+  border-radius: 999px;
+  padding: 5px 10px;
+}
+
+.connector-status .ok {
+  background: #e2f4e9;
+  color: #17663b;
+}
+
+.connector-status .warn {
+  background: #fff2d0;
+  color: #845100;
+}
+
+.notice {
+  border: 1px solid #f1d18d;
+  background: #fff9eb;
+  border-radius: 8px;
+  margin: 16px 0;
+  padding: 10px 12px;
+}
+
+.notice p {
+  margin: 4px 0;
+}
+
+.settings-form {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.settings-form label {
+  display: grid;
+  gap: 6px;
+  color: #405055;
+  font-weight: 700;
+}
+
+.settings-form label input,
+.settings-form label select {
+  font-weight: 400;
+}
+
+.settings-form button {
+  min-height: 42px;
+  border: 0;
+  border-radius: 6px;
+  background: #c85f3d;
+  color: white;
+  cursor: pointer;
+}
+
+.connector-list,
+.model-list {
+  display: grid;
+  gap: 10px;
+}
+
+.connector-list button,
+.model-list button {
+  display: grid;
+  gap: 4px;
+  text-align: left;
+  border: 1px solid #e0ddd7;
+  border-radius: 8px;
+  background: #fbfaf8;
+  color: #1b2430;
+  padding: 12px;
+  cursor: pointer;
+}
+
+.connector-list button:hover,
+.model-list button:hover {
+  border-color: #c85f3d;
+}
+
+.connector-list span,
+.model-list span,
+.model-list small {
+  color: #657277;
+}
+
+.model-list {
+  max-height: 54vh;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+pre {
+  max-height: 58vh;
+  overflow: auto;
+  border-radius: 8px;
+  background: #102026;
+  color: #e8f2f1;
+  padding: 14px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .list span {
@@ -210,6 +437,21 @@ form button {
 
 meter {
   width: 100%;
+}
+
+.emotion-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
+  margin-top: 14px;
+}
+
+.emotion-grid label {
+  display: grid;
+  gap: 4px;
+  color: #405055;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 code {
@@ -240,6 +482,9 @@ code {
 
   dl,
   form,
+  .inline-form,
+  .settings-grid,
+  .emotion-grid,
   .traits article {
     grid-template-columns: 1fr;
   }

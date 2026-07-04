@@ -19,7 +19,36 @@ export async function isBorn(home?: string): Promise<boolean> {
 
 export async function loadConfig(home?: string): Promise<BabyConfig> {
   const paths = getBabyPaths(home);
-  return readJsonFile<BabyConfig>(paths.config);
+  const raw = await readJsonFile<Partial<BabyConfig>>(paths.config);
+  return normalizeConfig(raw);
+}
+
+export function normalizeConfig(raw: Partial<BabyConfig>): BabyConfig {
+  const fallback = defaultConfig(raw.bornAt ?? new Date().toISOString());
+  return {
+    ...fallback,
+    ...raw,
+    model: {
+      ...fallback.model,
+      ...(raw.model ?? {})
+    },
+    loop: {
+      ...fallback.loop,
+      ...(raw.loop ?? {})
+    },
+    budgets: {
+      ...fallback.budgets,
+      ...(raw.budgets ?? {})
+    },
+    permissions: {
+      ...fallback.permissions,
+      ...(raw.permissions ?? {})
+    },
+    dashboard: {
+      ...fallback.dashboard,
+      ...(raw.dashboard ?? {})
+    }
+  };
 }
 
 export async function born(home?: string): Promise<BirthResult> {
@@ -33,7 +62,7 @@ export async function born(home?: string): Promise<BirthResult> {
   const now = new Date().toISOString();
   const config = alreadyBorn && (await pathExists(paths.config)) ? await loadConfig(paths.home) : defaultConfig(now);
 
-  if (!(await pathExists(paths.config))) {
+  if (!(await pathExists(paths.config)) || alreadyBorn) {
     await writeJsonFile(paths.config, config);
   }
   if (!(await pathExists(paths.constitution))) {
@@ -47,10 +76,30 @@ export async function born(home?: string): Promise<BirthResult> {
         "# Copy values into your shell environment or a local .env file used by your process manager.",
         "OPENAI_API_KEY=",
         "ANTHROPIC_API_KEY=",
+        "DEEPSEEK_API_KEY=",
+        "ZAI_API_KEY=",
+        "MINIMAX_API_KEY=",
+        "OLLAMA_HOST=http://127.0.0.1:11434",
         "CURIOUS_BABY_HOME="
       ].join("\n") + "\n",
       "utf8"
     );
+  }
+  if (!(await pathExists(paths.env))) {
+    await fs.promises.writeFile(
+      paths.env,
+      [
+        "# Local Curious Baby secrets.",
+        "# This file is ignored by git. Use `baby config model --api-key ...` to update it.",
+        "OPENAI_API_KEY=",
+        "ANTHROPIC_API_KEY=",
+        "DEEPSEEK_API_KEY=",
+        "ZAI_API_KEY=",
+        "MINIMAX_API_KEY="
+      ].join("\n") + "\n",
+      { encoding: "utf8", mode: 0o600 }
+    );
+    await fs.promises.chmod(paths.env, 0o600);
   }
 
   const store = new BabyStore(paths.database);

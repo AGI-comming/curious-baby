@@ -3,11 +3,12 @@ import fs from "node:fs";
 import readline from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 import { Command } from "commander";
-import { BabyRuntime, readProcessState, stopRunningBaby } from "../../runtime/src/engine.js";
-import { born, isBorn } from "../../runtime/src/installation.js";
+import { BabyRuntime, readProcessState, stopRunningBaby, wakeRunningBaby } from "../../runtime/src/engine.js";
+import { born, isBorn, loadConfig } from "../../runtime/src/installation.js";
+import { defaultApiKeyEnvVar, getModelConfigStatus, updateModelConfig } from "../../runtime/src/model-config.js";
 import { BabyStore } from "../../memory/src/store.js";
 import { getBabyPaths } from "../../shared/src/paths.js";
-import type { MemoryType, PermissionStatus } from "../../shared/src/types.js";
+import type { BabyConfig, MemoryType, PermissionStatus } from "../../shared/src/types.js";
 import { createDashboardServer } from "../../dashboard/src/server.js";
 
 const program = new Command();
@@ -21,12 +22,20 @@ program
 program
   .command("born")
   .description("Create Curious Baby's local home, memory, constitution, personality, and optionally start the runtime.")
+  .option("--provider <provider>", "Model provider: openai, anthropic, ollama, openai_compatible, deepseek, glm, or minimax.")
+  .option("--model <model>", "Model name, for example gpt-4.1-mini or claude-3-5-sonnet-latest.")
+  .option("--api-key-env <name>", "Environment variable that contains the model API key.")
+  .option("--api-key <key>", "Store an API key in Curious Baby's local .env file.")
+  .option("--base-url <url>", "Base URL for an OpenAI-compatible provider.")
+  .option("--configure-model", "Open the legacy interactive model configuration prompt.")
+  .option("--skip-model-config", "Skip the model configuration prompt.")
   .option("--no-start", "Initialize without starting the agent.")
-  .action(async (options: { start: boolean }) => {
+  .action(async (options: ModelOptions & { start: boolean; configureModel?: boolean; skipModelConfig?: boolean }) => {
     const home = getHome();
     const result = await born(home);
     console.log(result.created ? "Curious Baby was born." : "Curious Baby already exists.");
     console.log(`Home: ${result.paths.home}`);
+    await configureModelFromOptionsOrPrompt(home, result.config, options);
     if (!options.start) {
       console.log("Initialized without starting. Run `baby start` when ready.");
       return;
@@ -44,6 +53,50 @@ program
     console.log(`Home: ${result.paths.home}`);
   });
 
+const configCommand = program.command("config").description("View and update local Curious Baby configuration.");
+
+configCommand
+  .command("show")
+  .description("Show current configuration without printing secrets.")
+  .option("--json", "Print machine-readable JSON.")
+  .action(async (options: { json?: boolean }) => {
+    const home = getHome();
+    await ensureBornForCommand(home);
+    const config = await loadConfig(home);
+    const status = await getModelConfigStatus(home, config);
+    const safeConfig = {
+      ...config,
+      model: {
+        ...config.model,
+        hasApiKey: status.hasApiKey,
+        issues: status.issues
+      }
+    };
+    if (options.json) {
+      console.log(JSON.stringify(safeConfig, null, 2));
+      return;
+    }
+    printConfig(safeConfig);
+  });
+
+configCommand
+  .command("model")
+  .description("Configure the model provider, model name, token environment variable, and optional local API key.")
+  .option("--provider <provider>", "Model provider: openai, anthropic, ollama, openai_compatible, deepseek, glm, or minimax.")
+  .option("--model <model>", "Model name.")
+  .option("--api-key-env <name>", "Environment variable that contains the model API key.")
+  .option("--api-key <key>", "Store an API key in Curious Baby's local .env file.")
+  .option("--base-url <url>", "Base URL for an OpenAI-compatible provider.")
+  .action(async (options: ModelOptions) => {
+    const home = getHome();
+    await ensureBornForCommand(home);
+    const config = await loadConfig(home);
+    const next = await updateModelConfig(home, config, normalizeModelOptions(config, options));
+    const status = await getModelConfigStatus(home, next);
+    console.log("Model configuration updated.");
+    printModelStatus(status);
+  });
+
 program
   .command("start")
   .description("Start the already-born Curious Baby runtime.")
@@ -57,6 +110,14 @@ program
   .action(async () => {
     const stopped = await stopRunningBaby(getHome());
     console.log(stopped ? "Stop signal sent." : "Curious Baby does not appear to be running.");
+  });
+
+program
+  .command("wake")
+  .description("Wake the running Curious Baby loop so it thinks immediately instead of waiting for the next sleep interval.")
+  .action(async () => {
+    const woken = await wakeRunningBaby(getHome(), "cli");
+    console.log(woken ? "Wake signal sent." : "Curious Baby has not been born yet.");
   });
 
 program
@@ -83,7 +144,7 @@ program
     try {
       const oneShot = parts.join(" ").trim();
       if (oneShot) {
-        const reply = runtime.chat(oneShot);
+        const reply = await runtime.chat(oneShot);
         console.log(reply.content);
         return;
       }
@@ -93,7 +154,7 @@ program
       while (true) {
         const line = await rl.question("> ");
         if (line.trim() === "/exit") break;
-        const reply = runtime.chat(line);
+        const reply = await runtime.chat(line);
         console.log(`baby: ${reply.content}`);
       }
       rl.close();
@@ -226,11 +287,21 @@ program
     const paths = getBabyPaths(home);
     const bornState = await isBorn(home);
     const state = await readProcessState(home);
+    const config = bornState ? await loadConfig(home) : undefined;
+    const modelStatus = config ? await getModelConfigStatus(home, config) : undefined;
     console.log(`Node: ${process.version}`);
     console.log(`Home: ${paths.home}`);
     console.log(`Born: ${bornState ? "yes" : "no"}`);
     console.log(`Database: ${fs.existsSync(paths.database) ? "ok" : "missing"}`);
     console.log(`Constitution: ${fs.existsSync(paths.constitution) ? "ok" : "missing"}`);
+    if (modelStatus) {
+      console.log(`Model provider: ${modelStatus.provider}`);
+      console.log(`Model: ${modelStatus.model}`);
+      console.log(`API key: ${modelStatus.hasApiKey ? "configured" : "missing"}`);
+      for (const issue of modelStatus.issues) {
+        console.log(`Issue: ${issue}`);
+      }
+    }
     console.log(`Runtime status: ${state.status}`);
   });
 
@@ -248,6 +319,14 @@ program.action(async () => {
 });
 
 await program.parseAsync(process.argv);
+
+type ModelOptions = {
+  provider?: string;
+  model?: string;
+  apiKeyEnv?: string;
+  apiKey?: string;
+  baseUrl?: string;
+};
 
 async function startRuntime(home?: string): Promise<void> {
   await ensureBornForCommand(home);
@@ -270,6 +349,105 @@ async function openStoreForCommand(): Promise<BabyStore> {
   return new BabyStore(getBabyPaths(home).database);
 }
 
+async function configureModelFromOptionsOrPrompt(
+  home: string | undefined,
+  config: BabyConfig,
+  options: ModelOptions & { configureModel?: boolean; skipModelConfig?: boolean }
+): Promise<void> {
+  const hasOptions = Boolean(options.provider || options.model || options.apiKeyEnv || options.apiKey || options.baseUrl);
+  if (hasOptions) {
+    const next = await updateModelConfig(home, config, normalizeModelOptions(config, options));
+    printModelStatus(await getModelConfigStatus(home, next));
+    return;
+  }
+
+  const status = await getModelConfigStatus(home, config);
+  if (status.configured || options.skipModelConfig) {
+    if (status.issues.length > 0) {
+      console.log("Model configuration needs attention:");
+      for (const issue of status.issues) console.log(`- ${issue}`);
+    }
+    return;
+  }
+
+  if (!options.configureModel) {
+    console.log("Model is not configured yet.");
+    console.log("Open `baby dashboard` and use the Connectors page, or run `baby config model`.");
+    return;
+  }
+
+  if (!process.stdin.isTTY || !process.stdout.isTTY) {
+    console.log("Model is not configured yet. Open `baby dashboard`, run `baby config model`, or pass --provider/--model/--api-key to `baby born`.");
+    return;
+  }
+
+  const rl = readline.createInterface({ input, output });
+  try {
+    const answer = (await rl.question("Configure model now? [Y/n] ")).trim().toLowerCase();
+    if (answer === "n" || answer === "no") {
+      console.log("Skipped model configuration. Run `baby config model` later.");
+      return;
+    }
+    const providerRaw = (await rl.question("Provider [openai/anthropic/ollama/openai_compatible/deepseek/glm/minimax] (openai): ")).trim();
+    const provider = normalizeProvider(providerRaw || "openai");
+    const modelDefault =
+      provider === "anthropic"
+        ? "claude-3-5-sonnet-latest"
+        : provider === "ollama"
+          ? "llama3.1"
+          : provider === "deepseek"
+            ? "deepseek-chat"
+            : provider === "glm"
+              ? "glm-4.5"
+              : provider === "minimax"
+                ? "MiniMax-M2"
+                : "gpt-4.1-mini";
+    const model = (await rl.question(`Model (${modelDefault}): `)).trim() || modelDefault;
+    const baseUrl = provider === "openai_compatible" ? (await rl.question("Base URL: ")).trim() : undefined;
+    const apiKeyEnvVar = defaultApiKeyEnvVar(provider);
+    let apiKey: string | undefined;
+    if (provider !== "ollama") {
+      apiKey = (await rl.question(`API key (stored in local .env as ${apiKeyEnvVar}; leave blank to use existing env): `)).trim() || undefined;
+    }
+    const next = await updateModelConfig(home, config, {
+      provider,
+      model,
+      apiKeyEnvVar,
+      apiKey,
+      baseUrl
+    });
+    printModelStatus(await getModelConfigStatus(home, next));
+  } finally {
+    rl.close();
+  }
+}
+
+function normalizeModelOptions(config: BabyConfig, options: ModelOptions) {
+  const provider = options.provider ? normalizeProvider(options.provider) : config.model.provider;
+  return {
+    provider,
+    model: options.model,
+    apiKeyEnvVar: options.apiKeyEnv ?? defaultApiKeyEnvVar(provider),
+    apiKey: options.apiKey,
+    baseUrl: options.baseUrl
+  };
+}
+
+function normalizeProvider(provider: string): BabyConfig["model"]["provider"] {
+  if (
+    provider === "openai" ||
+    provider === "anthropic" ||
+    provider === "ollama" ||
+    provider === "openai_compatible" ||
+    provider === "deepseek" ||
+    provider === "glm" ||
+    provider === "minimax"
+  ) {
+    return provider;
+  }
+  throw new Error("Provider must be one of: openai, anthropic, ollama, openai_compatible, deepseek, glm, minimax.");
+}
+
 function printStatus(state: Awaited<ReturnType<typeof readProcessState>>): void {
   console.log(`Status: ${state.status}`);
   console.log(`Home: ${state.homeDir}`);
@@ -279,6 +457,27 @@ function printStatus(state: Awaited<ReturnType<typeof readProcessState>>): void 
   console.log(`Short-term usage: ${state.shortTermMemoryUsage}`);
   console.log(`Pending permissions: ${state.pendingPermissions}`);
   console.log(`Pending actions: ${state.pendingActions}`);
+}
+
+function printConfig(config: BabyConfig & { model: BabyConfig["model"] & { hasApiKey: boolean; issues: string[] } }): void {
+  console.log(`Born at: ${config.bornAt}`);
+  console.log(`Language: ${config.language}`);
+  console.log(`Dashboard: http://${config.dashboard.host}:${config.dashboard.port}`);
+  console.log(`Model provider: ${config.model.provider}`);
+  console.log(`Model: ${config.model.model}`);
+  if (config.model.baseUrl) console.log(`Base URL: ${config.model.baseUrl}`);
+  if (config.model.apiKeyEnvVar) console.log(`API key env: ${config.model.apiKeyEnvVar}`);
+  console.log(`API key: ${config.model.hasApiKey ? "configured" : "missing"}`);
+  for (const issue of config.model.issues) console.log(`Issue: ${issue}`);
+}
+
+function printModelStatus(status: Awaited<ReturnType<typeof getModelConfigStatus>>): void {
+  console.log(`Model provider: ${status.provider}`);
+  console.log(`Model: ${status.model}`);
+  if (status.baseUrl) console.log(`Base URL: ${status.baseUrl}`);
+  if (status.apiKeyEnvVar) console.log(`API key env: ${status.apiKeyEnvVar}`);
+  console.log(`API key: ${status.hasApiKey ? "configured" : "missing"}`);
+  for (const issue of status.issues) console.log(`Issue: ${issue}`);
 }
 
 async function openBrowser(url: string): Promise<void> {

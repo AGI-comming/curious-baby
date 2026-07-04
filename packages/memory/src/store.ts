@@ -245,6 +245,27 @@ export class BabyStore {
     return updated;
   }
 
+  reviseMemory(id: string, patch: Partial<Pick<MemoryRecord, "content" | "importance" | "confidence" | "source" | "tags" | "archived">>, reason: string): MemoryRecord | undefined {
+    const existing = this.getMemory(id);
+    if (!existing) return undefined;
+    const now = new Date().toISOString();
+    this.db
+      .prepare("INSERT INTO memory_revisions (id, memory_id, content, created_at, reason) VALUES (?, ?, ?, ?, ?)")
+      .run(randomUUID(), id, existing.content, now, reason);
+    const updated: MemoryRecord = {
+      ...existing,
+      ...patch,
+      updatedAt: now,
+      revision: existing.revision + 1
+    };
+    this.upsertMemory(updated);
+    return updated;
+  }
+
+  archiveMemory(id: string, reason: string): MemoryRecord | undefined {
+    return this.reviseMemory(id, { archived: true }, reason);
+  }
+
   getMemory(id: string): MemoryRecord | undefined {
     const row = this.db.prepare("SELECT * FROM memories WHERE id = ?").get(id) as Row | undefined;
     return row ? mapMemory(row) : undefined;

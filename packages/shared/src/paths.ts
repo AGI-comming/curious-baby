@@ -4,9 +4,11 @@ import path from "node:path";
 export type BabyPaths = {
   home: string;
   config: string;
+  env: string;
   envExample: string;
   database: string;
   pid: string;
+  wakeSignal: string;
   constitution: string;
   memories: string;
   archives: string;
@@ -24,9 +26,11 @@ export function getBabyPaths(home = getBabyHome()): BabyPaths {
   return {
     home,
     config: path.join(home, "config.json"),
+    env: path.join(home, ".env"),
     envExample: path.join(home, ".env.example"),
     database: path.join(home, "baby.sqlite"),
     pid: path.join(home, "baby.pid"),
+    wakeSignal: path.join(home, "wake.signal"),
     constitution: path.join(home, "constitution.md"),
     memories: path.join(home, "memories"),
     archives: path.join(home, "memories", "archives"),
