@@ -1,0 +1,246 @@
+:root {
+  color: #1b2430;
+  background: #f6f3ee;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+main {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+aside {
+  background: #102026;
+  color: #f7fbfb;
+  padding: 24px;
+}
+
+.brand {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 28px;
+}
+
+.brand h1 {
+  font-size: 20px;
+  line-height: 1.1;
+  margin: 0;
+}
+
+.brand p {
+  margin: 4px 0 0;
+  color: #a9c7c6;
+}
+
+.dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #f0b849;
+  box-shadow: 0 0 0 6px rgb(240 184 73 / 18%);
+}
+
+nav {
+  display: grid;
+  gap: 8px;
+}
+
+nav button {
+  min-height: 40px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #d9e8e7;
+  text-align: left;
+  padding: 0 12px;
+  cursor: pointer;
+}
+
+nav button.active,
+nav button:hover {
+  background: #1b3a42;
+}
+
+section {
+  padding: 24px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
+  gap: 16px;
+}
+
+.panel {
+  background: #ffffff;
+  border: 1px solid #e0ddd7;
+  border-radius: 8px;
+  padding: 18px;
+}
+
+.panel h2 {
+  font-size: 16px;
+  margin: 0 0 16px;
+}
+
+.big {
+  font-size: 22px;
+  line-height: 1.35;
+}
+
+dl {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: 8px;
+}
+
+dt {
+  color: #69767b;
+}
+
+dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.metric {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  border-top: 1px solid #e8e3dd;
+  padding: 14px 0;
+}
+
+.metric strong {
+  font-size: 30px;
+}
+
+.chat {
+  display: grid;
+  gap: 10px;
+  max-height: 52vh;
+  overflow: auto;
+  padding-right: 6px;
+}
+
+.chat article {
+  border-radius: 8px;
+  padding: 12px;
+  background: #f2f6f6;
+}
+
+.chat article.owner {
+  background: #fff6df;
+}
+
+.chat p,
+.list p {
+  margin: 6px 0 0;
+}
+
+form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 96px;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+input {
+  min-height: 42px;
+  border: 1px solid #cfc8be;
+  border-radius: 6px;
+  padding: 0 12px;
+}
+
+form button {
+  border: 0;
+  border-radius: 6px;
+  background: #c85f3d;
+  color: white;
+  cursor: pointer;
+}
+
+.list,
+.traits {
+  display: grid;
+  gap: 12px;
+}
+
+.list article,
+.traits article {
+  border-top: 1px solid #e8e3dd;
+  padding-top: 12px;
+}
+
+.list span {
+  display: inline-block;
+  color: #0c6867;
+  font-weight: 700;
+}
+
+.list small,
+.traits small {
+  display: block;
+  color: #657277;
+  margin-top: 4px;
+}
+
+.traits article {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 180px;
+  gap: 16px;
+  align-items: center;
+}
+
+meter {
+  width: 100%;
+}
+
+code {
+  display: inline-block;
+  background: #102026;
+  color: white;
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+@media (max-width: 760px) {
+  main,
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  aside {
+    padding: 16px;
+  }
+
+  nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  section {
+    padding: 16px;
+  }
+
+  dl,
+  form,
+  .traits article {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,8 @@
+node_modules/
+.npm-cache/
+dist/
+packages/dashboard/web/dist/
+.curious-baby/
+*.log
+.env
+.DS_Store
